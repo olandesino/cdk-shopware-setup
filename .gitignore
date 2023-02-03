@@ -1,0 +1,7 @@
+node_modules
+*.DS_Store
+.vscode
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+cdk.out/*

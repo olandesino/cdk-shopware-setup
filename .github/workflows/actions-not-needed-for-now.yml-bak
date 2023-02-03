@@ -1,0 +1,32 @@
+name: build-push-update
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: eu-central-1
+      ECR_REPOSITORY: test-app-repo
+      ECS_CLUSTER: FirstService-ClusterFargate19D566CE-cDZpZ8Kq8UXa
+      ECS_WEBSITE_SERVICE: FirstService-FargateAndreaService54121F3B-LSauJ92pCold
+    steps:
+      - uses: actions/checkout@v2
+      - name: Login to AWS
+        run: |
+          aws configure set aws_access_key_id "${{ secrets.AWS_ACCESS_KEY }}"
+          aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_KEY }}"
+          aws configure set region "${{ env.AWS_REGION }}"
+          aws configure set output "json"
+          aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 428316196976.dkr.ecr.eu-central-1.amazonaws.com
+      - name: Build and push
+        env:
+          WEBSITE_TAG: 428316196976.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+        run: |
+          docker build -t $WEBSITE_TAG ./simple-web-app
+          docker push $WEBSITE_TAG
+      - name: Update Deployement
+        run: aws ecs update-service --force-new-deployment --service ${{ env.ECS_WEBSITE_SERVICE }} --cluster ${{ env.ECS_CLUSTER }} --region ${{ env.AWS_REGION }}
