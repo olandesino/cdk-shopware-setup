@@ -21,6 +21,6 @@ Stack is created in lib/stack/
 Constructs are defined in lib/constructs/
 
 ## TODOs
-1 - hostname. Nothing defined so far. depends on client.
-2 - Email server (SES) depends on hostname/domain if it exsist alread or should be handled by aws route 53
-3 - Cloudfront. Is it needed? good for performance and good in case there is external cdn to get static content
+* hostname. Nothing defined so far. depends on client.
+* Email server (SES) depends on hostname/domain if it exsist alread or should be handled by aws route 53
+* Cloudfront. Is it needed? good for performance and good in case there is external cdn to get static content
