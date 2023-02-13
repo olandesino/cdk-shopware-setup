@@ -6,7 +6,7 @@ import { Construct } from 'constructs';
 import { SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { RemovalPolicy } from 'aws-cdk-lib';
 
-export interface RedisProps extends cdk.StackProps {
+export interface RedisProps {
 
     /**
      * Security group needed
@@ -24,7 +24,7 @@ export interface RedisProps extends cdk.StackProps {
 
 }
 
-export class RedisCluster extends cdk.Stack {
+export class RedisCluster extends Construct {
     constructor(scope: Construct, id: string, props: RedisProps) {
         super(scope, id);
 
@@ -36,10 +36,6 @@ export class RedisCluster extends cdk.Stack {
 
             // the properties below are optional
             cacheSubnetGroupName: 'redisSubnetGroupName',
-            tags: [{
-                key: 'env',
-                value: 'dev',
-            }],
         });
 
         // The security group that defines network level access to the cluster
@@ -47,7 +43,7 @@ export class RedisCluster extends cdk.Stack {
             vpc: targetVpc,
             allowAllOutbound: true,
             description: "Security group for the redis cluster",
-            securityGroupName: 'SG-REDIS-' + id
+            securityGroupName: 'sgRedis'
         });
         sgRedis.connections.allowFrom(props.sgEc2, ec2.Port.tcp(6379), 'allow from ec2 sg')
 
@@ -59,8 +55,6 @@ export class RedisCluster extends cdk.Stack {
         removalPolicy: RemovalPolicy.DESTROY,
         retention: logs.RetentionDays.ONE_DAY
        });
-
-
 
         // The cluster resource itself.
         const redisCluster = new elasticache.CfnCacheCluster(this, `${id}-cluster`, {
@@ -86,14 +80,13 @@ export class RedisCluster extends cdk.Stack {
         redisCluster.addDependency(redisSubnetGroup)
 
 
+        // OUTPUTS
         new cdk.CfnOutput(this, 'redisCacheEndpointUrl', {
             value: redisCluster.attrRedisEndpointAddress,
         });
-
         new cdk.CfnOutput(this, 'redisCachePort', {
             value: redisCluster.attrRedisEndpointPort,
         });
-
         cdk.Tags.of(redisCluster).add('Name', 'redisCluster', {
             priority: 300,
         });
@@ -112,9 +105,6 @@ export class RedisCluster extends cdk.Stack {
         //     }
         //   );
         //   redisReplication.addDependsOn(redisSubnetGroup);
-
-
-
 
     }
 }

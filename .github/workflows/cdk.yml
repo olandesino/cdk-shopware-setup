@@ -6,7 +6,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-      
       - name: Cache node modules
         id: cache-npm
         uses: actions/cache@v3
@@ -24,11 +23,9 @@ jobs:
         name: List the state of node modules
         continue-on-error: true
         run: npm list
-
       - uses: actions/setup-node@v3
         with:
           node-version: "16"
-      
       - name: Configure aws credentials
         uses: aws-actions/configure-aws-credentials@master
         with:
@@ -40,4 +37,4 @@ jobs:
       - name: Synth stack
         run: yarn cdk synth
       - name: Deploy stack
-        run: yarn cdk deploy --all --require-approval never --parameters environment=DEV
+        run: yarn cdk deploy --all --require-approval never 

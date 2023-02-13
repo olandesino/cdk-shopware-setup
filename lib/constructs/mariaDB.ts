@@ -5,43 +5,13 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
-export interface MysqlProps extends cdk.StackProps {
+export interface MysqlProps {
 
-    /**
-     * VPC
-     * @type {string}
-     * @memberof MysqlProps
-     */
-     readonly vpc?: any;
-
-    /**
-     * Security group needed
-     * @type {*}
-     * @memberof MysqlProps
-     */
+    readonly vpc: any;
     readonly sgEc2?: any;
-  
-  
-    /**
-     * provide the name of the database
-     * @type {string}
-     * @memberof MysqlProps
-     */
     readonly dbName?: string;
-  
-    /**
-     * provide the version of the database
-     * @type {string}}
-     * @memberof props
-     */
-     readonly envVar: string;
-
-    /**
-     * provide the version of the database
-     * @type {*}
-     * @memberof MysqlProps
-     * @default rds.MariaDbEngineVersion.VER_10_3
-     */
+    readonly envVar?: string;
+    readonly preferredMaintenanceWindow?: string;
     readonly engineVersion?: any;
   
     /**
@@ -51,44 +21,13 @@ export interface MysqlProps extends cdk.StackProps {
      * @default dbadmin
      */
     readonly mysqlUsername?: string;
-  
-    /**
-     * backup retention days for example 14
-     * @type {number}
-     * @memberof MysqlProps
-     * @default 14
-     */
     readonly backupRetentionDays?: number;
-  
-    /**
-     * backup window time 00:15-01:15
-     * @type {string}
-     * @memberof MysqlProps
-     * @default 00:15-01:15
-     */
-  
     readonly backupWindow?: string;
-  
-    /**
-     *
-     * maintenance time Sun:23:45-Mon:00:15
-     * @type {string}
-     * @memberof MysqlProps
-     * @default Sun:23:45-Mon:00:15
-     */
-    readonly preferredMaintenanceWindow?: string;
-  
-    /**
-     *
-     * list of ingress sources
-     * @type {any []}
-     * @memberof MysqlProps
-     */
     readonly ingressSources?: any[];
   }
   
   
-  export class MariaDB extends cdk.Stack {
+  export class MariaDB extends Construct {
     constructor(scope: Construct, id: string, props: MysqlProps) {
       super(scope, id);
   
@@ -101,15 +40,11 @@ export interface MysqlProps extends cdk.StackProps {
       if (typeof props.ingressSources !== 'undefined') {
         ingressSources = props.ingressSources;
       }
-      var engineVersion = rds.MariaDbEngineVersion.VER_10_3;
-      if (typeof props.engineVersion !== 'undefined') {
-        engineVersion = props.engineVersion;
-      }
 
       const privateSubnets = props.vpc.selectSubnets({ subnetType: SubnetType.PRIVATE_WITH_EGRESS }).subnets;
   
   
-      const allAll = ec2.Port.allTraffic();
+      // const allAll = ec2.Port.allTraffic();
       const tcp3306 = ec2.Port.tcpRange(3306, 3306);
 
       //sg for db
@@ -117,16 +52,17 @@ export interface MysqlProps extends cdk.StackProps {
         vpc: props.vpc,
         allowAllOutbound: true,
         description: 'SG-Database',
-        securityGroupName: `SG-DB-${id}`,
+        securityGroupName: `sgDB-${id}`,
       });
   
       //inbound rules
-      dbsg.addIngressRule(dbsg, allAll, 'all from self');
+      // dbsg.addIngressRule(dbsg, allAll, 'all from self');  
       dbsg.connections.allowFrom(props.sgEc2, ec2.Port.tcp(3306), 'only custom Allow traffic from ec2')
       
-      const mysqlConnectionPorts = [
-        { port: tcp3306, description: 'tcp3306 Mysql' },
-      ];
+      const mysqlConnectionPorts = [{ 
+        port: tcp3306, 
+        description: 'tcp3306 Mysql' 
+      }];
       
       for (let ingressSource of ingressSources!) {
         for (let c of mysqlConnectionPorts) {
@@ -161,7 +97,7 @@ export interface MysqlProps extends cdk.StackProps {
   
       const dbParameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
         engine: rds.DatabaseInstanceEngine.mariaDb({
-          version: engineVersion,
+          version: props.engineVersion,
         }),
       });
   
@@ -171,7 +107,7 @@ export interface MysqlProps extends cdk.StackProps {
         instanceIdentifier: props.dbName,
         credentials: mysqlCredentials,
         engine: rds.DatabaseInstanceEngine.mariaDb({
-          version: engineVersion,
+          version: props.engineVersion,
         }),
         backupRetention: cdk.Duration.days(7),
         allocatedStorage: 20,
@@ -216,7 +152,7 @@ export interface MysqlProps extends cdk.StackProps {
         value: props.dbName!,
       });
 
-      cdk.Tags.of(mysqlInstance).add('env', props.envVar)
+      // cdk.Tags.of(mysqlInstance).add('env', props.envVar)
 
     }
   

@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Running an shopware with load balanced service on ecs",
   "private": true,
-  "type": "module",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
@@ -18,11 +17,9 @@
   },
   "dependencies": {
     "aws-cdk-lib": "^2.0.0",
-    "cdk-dia": "^0.9.0",
-    "constructs": "^10.0.0",
+    "constructs": "^10.1.244",
     "ts-node": "^10.9.1"
   },
-  "main": "index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nx-ps/poc-aws-cdk-setup.git"
