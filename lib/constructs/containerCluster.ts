@@ -35,6 +35,8 @@ export interface EcsProps {
      * @memberof ContainerCluster
      */
     readonly lb: any;
+
+    readonly stageName: string
 }
 
 export class ContainerCluster extends Construct {
@@ -53,7 +55,7 @@ export class ContainerCluster extends Construct {
         // logs
         const ecsLogs = new ecs.AwsLogDriver(
             {
-                streamPrefix: "container-prefix",
+                streamPrefix: props.stageName,
                 logGroup: new logs.LogGroup(this, 'log-ecs', {
                     logGroupName: "/aws/ecs/log" + id,
                     retention: logs.RetentionDays.ONE_DAY,
@@ -75,14 +77,14 @@ export class ContainerCluster extends Construct {
             containerPort: 80,
         });
         // Create Service
-        const service = new ecs.Ec2Service(this, "shopware-service", {
+        const service = new ecs.Ec2Service(this, `${props.stageName}-shopware-service`, {
             cluster,
             taskDefinition,
             securityGroups: [props.sgEc2]
         });
 
         props.lb.addListener('PublicListener', { port: 80, open: true }).
-            addTargets('ecsTarget', {
+            addTargets(`${props.stageName}-ecsTarget`, {
                 port: 8080,
                 targets: [service.loadBalancerTarget({
                     containerName: container.containerName,
@@ -91,9 +93,13 @@ export class ContainerCluster extends Construct {
                 // include health check (default is none)
                 healthCheck: {
                     interval: cdk.Duration.seconds(60),
-                    path: "/health",
+                    path: "/",
                     timeout: cdk.Duration.seconds(5),
                 }
             });
+
+        cdk.Tags.of(service).add('stage', props.stageName)
+        cdk.Tags.of(cluster).add('stage', props.stageName)
+        cdk.Tags.of(container).add('stage', props.stageName)
     }
 }

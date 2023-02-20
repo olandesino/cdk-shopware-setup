@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --prefer-ts-exts bin/index",
+  "app": "npx ts-node --prefer-ts-exts bin/setup-dev",
   "watch": {
     "include": [
       "**"
@@ -17,7 +17,8 @@
     ]
   },
   "context": {
-    "environment": "DEV",
+    "devEnv": "dev-",
+    "stagingEnv": "stagingEnv-",
     "dbName" : "simpleDB",
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,

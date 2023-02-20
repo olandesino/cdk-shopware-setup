@@ -37,4 +37,6 @@ jobs:
       - name: Synth stack
         run: yarn cdk synth
       - name: Deploy stack
-        run: yarn cdk deploy --all --require-approval never 
+      # deploy only dev stack -to figure out if best solution is to duplicate this file or 
+      # play with if/else based on gh event
+        run: yarn cdk deploy dev-AwsProductSetupStack --require-approval never

@@ -8,19 +8,12 @@ import { RemovalPolicy } from 'aws-cdk-lib';
 
 export interface RedisProps {
 
-    /**
-     * Security group needed
-     * @type {*}
-     * @memberof RedisCluster
-    */
-    readonly sgEc2?: any;
-
-    /**
-     * VPC
-     * @type {string}
-     * @memberof RedisCluster
-     */
-    readonly vpc?: any;
+    readonly sgEc2: any;
+    readonly vpc: ec2.Vpc;
+    readonly stageName: string
+    readonly cacheNodeType: string
+    readonly cacheEngineVersion: string
+    readonly redisName: string
 
 }
 
@@ -35,7 +28,7 @@ export class RedisCluster extends Construct {
             subnetIds: targetVpc.selectSubnets({ subnetType: SubnetType.PRIVATE_WITH_EGRESS }).subnetIds,
 
             // the properties below are optional
-            cacheSubnetGroupName: 'redisSubnetGroupName',
+            cacheSubnetGroupName: `${props.stageName}-RedisSubnetGroupName`,
         });
 
         // The security group that defines network level access to the cluster
@@ -43,7 +36,7 @@ export class RedisCluster extends Construct {
             vpc: targetVpc,
             allowAllOutbound: true,
             description: "Security group for the redis cluster",
-            securityGroupName: 'sgRedis'
+            securityGroupName: `${props.stageName}-sgRedis`
         });
         sgRedis.connections.allowFrom(props.sgEc2, ec2.Port.tcp(6379), 'allow from ec2 sg')
 
@@ -51,21 +44,21 @@ export class RedisCluster extends Construct {
         // LOG stuff
        const redisLog = new logs.LogGroup(this, "RedisLogs", 
        {
-        logGroupName:  "/aws/redis/slow-logs",
+        logGroupName:  `${props.stageName}/aws/redis/slow-logs`,
         removalPolicy: RemovalPolicy.DESTROY,
         retention: logs.RetentionDays.ONE_DAY
        });
 
         // The cluster resource itself.
-        const redisCluster = new elasticache.CfnCacheCluster(this, `${id}-cluster`, {
-            cacheNodeType: 'cache.t2.micro',
+        const redisCluster = new elasticache.CfnCacheCluster(this, props.redisName, {
+            cacheNodeType: props.cacheNodeType,
             engine: 'redis',
             numCacheNodes: 1,
             cacheSubnetGroupName: redisSubnetGroup.cacheSubnetGroupName,
             vpcSecurityGroupIds: [
                 sgRedis.securityGroupId
             ],
-            engineVersion: "7.0",
+            engineVersion: props.cacheEngineVersion,
             logDeliveryConfigurations: [{
                 destinationDetails: {
                   cloudWatchLogsDetails: {
@@ -81,13 +74,13 @@ export class RedisCluster extends Construct {
 
 
         // OUTPUTS
-        new cdk.CfnOutput(this, 'redisCacheEndpointUrl', {
+        new cdk.CfnOutput(this, `${props.stageName}-redisCacheEndpointUrl`, {
             value: redisCluster.attrRedisEndpointAddress,
         });
-        new cdk.CfnOutput(this, 'redisCachePort', {
+        new cdk.CfnOutput(this, `${props.stageName}-redisCachePort`, {
             value: redisCluster.attrRedisEndpointPort,
         });
-        cdk.Tags.of(redisCluster).add('Name', 'redisCluster', {
+        cdk.Tags.of(redisCluster).add('env',props.stageName, {
             priority: 300,
         });
         //   const redisReplication = new CfnReplicationGroup(

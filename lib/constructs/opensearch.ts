@@ -9,6 +9,9 @@ export interface OsProps extends cdk.StackProps {
     readonly sgEc2: any;
     readonly vpc: any;
     readonly asgRoleArn: string;
+    readonly stageName: string
+    readonly searchEngineVersion: string
+    readonly searchInstanceType: string
 
 }
 
@@ -18,7 +21,7 @@ export class OpenSearchNode extends Construct {
         const sgOS = new SecurityGroup(this, `os-security-group`, {
             vpc: props.vpc,
             description: "Security group for the open search",
-            securityGroupName: 'sgOS' + id,
+            securityGroupName: `${props.stageName}-sgOS`,
             allowAllOutbound: true
         });
         sgOS.connections.allowFrom(props.sgEc2, Port.allTcp(), 'custom request traffic from shopware')
@@ -28,12 +31,12 @@ export class OpenSearchNode extends Construct {
         onlyPrivateSubnet.push(props.vpc.privateSubnets[0])
 
         // LOG stuff
-        const { searchAppLog, slowSearchLog, slowIndexLog } = this.createLogGroups();
+        const { searchAppLog, slowSearchLog, slowIndexLog } = this.createLogGroups(props.stageName);
 
 
 
         const domain = new Domain(this, "OS-Domain", {
-            version: EngineVersion.openSearch("2.3"),
+            version: EngineVersion.openSearch(props.searchEngineVersion),
             ebs: {
                 enabled: true,
                 volumeSize: 10,
@@ -43,7 +46,7 @@ export class OpenSearchNode extends Construct {
             vpc: props.vpc,
             securityGroups: [sgOS],
             vpcSubnets: [{ subnets: onlyPrivateSubnet }],
-            domainName: 'dev-search-node',
+            domainName: `${props.stageName}-search-node`.toLowerCase(),
             enforceHttps: true,
             enableVersionUpgrade: true,
             logging: {
@@ -56,7 +59,7 @@ export class OpenSearchNode extends Construct {
                 slowIndexLogGroup: slowIndexLog
             },
             capacity: {
-                dataNodeInstanceType: "t3.small.search",
+                dataNodeInstanceType: props.searchInstanceType,
                 dataNodes: 1,
                 // masterNodeInstanceType: "c6g.large.elasticsearch",
                 // masterNodes: 3
@@ -84,26 +87,26 @@ export class OpenSearchNode extends Construct {
 
         });
 
-        new cdk.CfnOutput(this, 'OS-endpoint', { value: domain.domainEndpoint })
-
+        new cdk.CfnOutput(this, `${props.stageName}-search-endpoint`, { value: domain.domainEndpoint })
+        cdk.Tags.of(domain).add('stage', props.stageName)
     }
 
-    private createLogGroups() {
+    private createLogGroups(stageName:string) {
         const searchAppLog = new logs.LogGroup(this, "searchAppLog",
             {
-                logGroupName: "/aws/search/app-logs",
+                logGroupName: `${stageName}-/aws/search/app-logs`,
                 removalPolicy: cdk.RemovalPolicy.DESTROY,
                 retention: logs.RetentionDays.ONE_DAY
             });
         const slowSearchLog = new logs.LogGroup(this, "slowSearchLog",
             {
-                logGroupName: "/aws/search/slow-logs",
+                logGroupName: `${stageName}-/aws/search/slow-logs`,
                 removalPolicy: cdk.RemovalPolicy.DESTROY,
                 retention: logs.RetentionDays.ONE_DAY
             });
         const slowIndexLog = new logs.LogGroup(this, "slowIndexLog",
             {
-                logGroupName: "/aws/search/slowIndex-logs",
+                logGroupName: `${stageName}-/aws/search/slowIndex-logs`,
                 removalPolicy: cdk.RemovalPolicy.DESTROY,
                 retention: logs.RetentionDays.ONE_DAY
             });
